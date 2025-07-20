@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_url_shortener
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ${MYSQL_DATA_DIR}:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+
+  app:
+    image: url_shortener_app
+    build: .
+    container_name: url_shortener_app
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      - mysql
+    env_file:
+      - .env
+    volumes:
+      - .:/usr/src/app
