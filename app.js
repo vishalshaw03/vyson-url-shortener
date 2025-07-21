@@ -18,14 +18,16 @@ const ibdPath = path.join(
   `${TABLE_NAME}.ibd`
 );
 
-const CODE_LENGTH = 12; // Length of the short code
-const retries = 5; // Number of retries for generating unique short codes
-
 app.use(express.json());
 
 // Generate short code
-function generateShortCode() {
-  return crypto.randomBytes(CODE_LENGTH / 2).toString('hex'); // 12-char code
+function generateShortCode(url) {
+  return crypto
+    .createHash('sha256')
+    .update(url + Date.now())
+    .digest('base64') // URL-unfriendly chars
+    .replace(/[+/=]/g, '') // Remove non-URL-safe
+    .slice(0, 12);
 }
 
 const getConnection = async () => {
@@ -47,22 +49,15 @@ app.post('/shorten', async (req, res) => {
     return res.status(400).json({ error: 'URL is required' });
   }
   try {
-    for (let i = 0; i < retries; i++) {
-      const short_code = generateShortCode();
+    const short_code = generateShortCode(url);
 
-      const query = `INSERT INTO ${TABLE_NAME} (original_url, short_code) VALUES (?, ?)`;
+    const query = `INSERT INTO ${TABLE_NAME} (original_url, short_code) VALUES (?, ?)`;
 
-      const conn = await getConnection();
-      const db = conn.promise();
+    const conn = await getConnection();
+    const db = conn.promise();
 
-      try {
-        await db.query(query, [url, short_code]);
-        res.json({ short_url: `${BASE_URL}/d/${short_code}` });
-      } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') continue; // try again with a new short_code
-        throw err;
-      }
-    }
+    await db.query(query, [url, short_code]);
+    res.json({ short_url: `${BASE_URL}/d/${short_code}` });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
       return res

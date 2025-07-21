@@ -1,16 +1,8 @@
 const mysql = require('mysql2');
-require('dotenv').config();
+const dbConfig = require('./db-config').dbConfig;
 
 const MAX_RETRIES = 10;
 const RETRY_INTERVAL = 2000; // 2 seconds
-
-const dbConfig = {
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-};
 
 let connection;
 let isConnected = false;
@@ -32,7 +24,7 @@ function connectWithRetry(retriesLeft = MAX_RETRIES) {
     } else {
       isConnected = true;
       console.log('✅ MySQL connected!');
-      connectCallbacks.forEach(cb => cb(connection));
+      connectCallbacks.forEach((cb) => cb(connection));
     }
   });
 }
